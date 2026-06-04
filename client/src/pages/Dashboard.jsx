@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
-import { PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
+import { PieChart, Pie, Cell, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid,} from "recharts";
 import ExpenseForm from "../components/ExpenseForm";
 import { getExpenses, getSummary, deleteExpense } from "../api/expenseApi";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 
 export default function Dashboard() {
   const [expenses, setExpenses] = useState([]);
@@ -10,6 +12,7 @@ export default function Dashboard() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedPayment, setSelectedPayment] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
+  const [graphView, setGraphView] = useState("month");
 
   useEffect(() => {
     loadData();
@@ -34,12 +37,90 @@ export default function Dashboard() {
     console.log(error);
   }
 };
+const exportToExcel = () => {
+  const exportData = filteredExpenses.map((expense) => ({
+    Category: expense.category,
+    Amount: expense.amount,
+    Date: expense.date,
+    PaymentMethod: expense.paymentMethod,
+    Note: expense.note,
+    Tags: expense.tags,
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(exportData);
+
+  const workbook = XLSX.utils.book_new();
+
+  XLSX.utils.book_append_sheet(
+    workbook,
+    worksheet,
+    "Expenses"
+  );
+
+  const excelBuffer = XLSX.write(workbook, {
+    bookType: "xlsx",
+    type: "array",
+  });
+
+  const fileData = new Blob(
+    [excelBuffer],
+    {
+      type:
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    }
+  );
+
+  saveAs(
+    fileData,
+    `expenses_${new Date().toISOString().slice(0, 10)}.xlsx`
+  );
+};
 const pieData = summary?.categoryBreakdown
   ? Object.entries(summary.categoryBreakdown).map(([key, value]) => ({
       name: key,
       value: value,
     }))
   : [];
+  const graphData = [];
+
+expenses.forEach((expense) => {
+  const dateObj = new Date(expense.date);
+
+  let label = "";
+
+  if (graphView === "month") {
+  label = dateObj.toLocaleString("default", {
+    month: "short",
+    year: "2-digit",
+  });
+}
+
+  else if (graphView === "year") {
+    label = dateObj.getFullYear().toString();
+  }
+
+  else if (graphView === "week") {
+    const day = dateObj.getDate();
+
+    if (day <= 7) label = "Week 1";
+    else if (day <= 14) label = "Week 2";
+    else if (day <= 21) label = "Week 3";
+    else label = "Week 4";
+  }
+
+  const existing = graphData.find(
+    (item) => item.label === label
+  );
+
+  if (existing) {
+    existing.amount += Number(expense.amount);
+  } else {
+    graphData.push({
+      label,
+      amount: Number(expense.amount),
+    });
+  }
+});
 const COLORS = [
   "#8884d8",
   "#82ca9d",
@@ -138,6 +219,44 @@ const filteredExpenses = expenses.filter((expense) => {
   )}
 </div>
 <div className="bg-white p-4 rounded shadow">
+
+  <div className="flex justify-between items-center mb-4">
+    <h2 className="text-xl font-semibold">
+      Expense Trends
+    </h2>
+
+    <select
+      value={graphView}
+      onChange={(e) => setGraphView(e.target.value)}
+      className="border p-2 rounded"
+    >
+      <option value="month">Month</option>
+      <option value="year">Year</option>
+      <option value="week">Week</option>
+    </select>
+  </div>
+
+  <BarChart
+    width={250}
+    height={150}
+    data={graphData}
+  >
+    <CartesianGrid strokeDasharray="3 3" />
+
+    <XAxis dataKey="label" />
+
+    <YAxis />
+
+    <Tooltip />
+
+    <Bar
+      dataKey="amount"
+      fill="#8884d8"
+    />
+  </BarChart>
+
+</div>
+<div className="bg-white p-4 rounded shadow">
   <input
     type="text"
     placeholder="Search category, note, or tags..."
@@ -193,9 +312,18 @@ const filteredExpenses = expenses.filter((expense) => {
 </div>
       {/* Expense List */}
       <div className="bg-white p-4 rounded shadow">
-        <h2 className="text-xl font-semibold mb-3">
-          Expenses
-        </h2>
+        <div className="flex justify-between items-center mb-3">
+  <h2 className="text-xl font-semibold">
+    Expenses
+  </h2>
+
+  <button
+    onClick={exportToExcel}
+    className="bg-green-600 text-white px-4 py-2 rounded"
+  >
+    Export Excel
+  </button>
+</div>
 
         {filteredExpenses.map((e) => (
   <div
