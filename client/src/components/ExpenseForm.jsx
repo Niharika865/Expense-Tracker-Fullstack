@@ -11,7 +11,7 @@ export default function ExpenseForm({
   const [form, setForm] = useState({
     amount: "",
     category: "Food",
-    date: todayStr, // ✅ default today
+    date: todayStr,
     note: "",
     paymentMethod: "UPI",
     tags: "",
@@ -42,24 +42,21 @@ export default function ExpenseForm({
       [name]: type === "checkbox" ? checked : value,
     });
 
-    setError(""); // clear error while typing
+    setError("");
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // ✅ SAFE DATE CHECK (FIXED ISSUE)
+    const today = new Date().toISOString().split("T")[0];
 
-    const inputDate = new Date(form.date);
-
-    // ❌ Future date check
-    if (inputDate > today) {
+    if (form.date > today) {
       setError("Future dates are not allowed");
       return;
     }
 
-    // ❌ Extra validation (optional but good)
+    // basic validation
     if (!form.amount || form.amount <= 0) {
       setError("Amount must be greater than 0");
       return;
@@ -78,7 +75,6 @@ export default function ExpenseForm({
         await addExpense(cleanData);
       }
 
-      // reset form
       setForm({
         amount: "",
         category: "Food",
@@ -140,7 +136,7 @@ export default function ExpenseForm({
           <option>Other</option>
         </select>
 
-        {/* Date (blocked future selection) */}
+        {/* Date (fixed + safe) */}
         <input
           type="date"
           name="date"
@@ -193,7 +189,7 @@ export default function ExpenseForm({
           Recurring Expense
         </label>
 
-        {/* Error message */}
+        {/* Error */}
         {error && (
           <p className="text-red-500 text-sm">{error}</p>
         )}

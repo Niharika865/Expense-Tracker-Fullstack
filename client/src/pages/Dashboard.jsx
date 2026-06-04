@@ -197,10 +197,10 @@ const filteredExpenses = expenses
     <div className="text-sm text-gray-500">Total</div>
     <div className="text-xl font-bold">
       {Number(summary?.totalSpentThisMonth || 0)
-      .toLocaleString("en-IN", {
-      style: "currency",
-      currency: "INR",
-  })}
+      .toLocaleString(navigator.language, {
+  style: "currency",
+  currency: "INR",
+})}
     </div>
   </div>
 
@@ -210,31 +210,24 @@ const filteredExpenses = expenses
   </div>
 
   <div className="text-xl font-bold">
-    {Number(summary?.averageExpense || 0).toLocaleString(
-      "en-IN",
-      {
-        style: "currency",
-        currency: "INR",
-      }
-    )}
+    {Number(summary?.averageExpense || 0).toLocaleString(navigator.language, {
+  style: "currency",
+  currency: "INR",
+})}
   </div>
 </div>
 
   
-
   <div className="bg-white p-4 rounded shadow border-l-4 border-red-500">
   <div className="text-sm text-gray-500">
     Highest Expense
   </div>
 
   <div className="text-xl font-bold text-red-500">
-    {Number(summary?.highestExpense || 0).toLocaleString(
-      "en-IN",
-      {
-        style: "currency",
-        currency: "INR",
-      }
-    )}
+    {Number(summary?.highestExpense || 0).toLocaleString(navigator.language, {
+  style: "currency",
+  currency: "INR",
+})}
   </div>
 </div>
 
@@ -433,10 +426,10 @@ const filteredExpenses = expenses
 
     {/* Amount */}
     <span>
-      {Number(e.amount).toLocaleString("en-IN", {
-        style: "currency",
-        currency: "INR",
-      })}
+      {Number(e.amount).toLocaleString(navigator.language, {
+  style: "currency",
+  currency: "INR",
+})}
     </span>
 
     {/* Date (FIXED) */}
