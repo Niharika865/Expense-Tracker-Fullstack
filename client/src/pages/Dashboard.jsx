@@ -13,6 +13,9 @@ export default function Dashboard() {
   const [selectedPayment, setSelectedPayment] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
   const [graphView, setGraphView] = useState("month");
+  const [sortOrder, setSortOrder] = useState("newest");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   useEffect(() => {
     loadData();
@@ -138,22 +141,48 @@ const COLORS = [
   "#FF4560",
   "#775DD0",
 ];
-const filteredExpenses = expenses.filter((expense) => {
-  const categoryMatch =
-    selectedCategory === "All" ||
-    expense.category === selectedCategory;
+const filteredExpenses = expenses
+  .filter((expense) => {
 
-  const paymentMatch =
-    selectedPayment === "All" ||
-    expense.paymentMethod === selectedPayment;
+    const categoryMatch =
+      selectedCategory === "All" ||
+      expense.category === selectedCategory;
 
-  const searchMatch =
-    expense.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    expense.note?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    expense.tags?.toLowerCase().includes(searchTerm.toLowerCase());
+    const paymentMatch =
+      selectedPayment === "All" ||
+      expense.paymentMethod === selectedPayment;
 
-  return categoryMatch && paymentMatch && searchMatch;
-});
+    const searchMatch =
+      expense.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      expense.note?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      expense.tags?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const startMatch =
+      !startDate ||
+      expense.date >= startDate;
+
+    const endMatch =
+      !endDate ||
+      expense.date <= endDate;
+
+    return (
+      categoryMatch &&
+      paymentMatch &&
+      searchMatch &&
+      startMatch &&
+      endMatch
+    );
+  })
+
+  .sort((a, b) => {
+
+    if (sortOrder === "newest") {
+      return new Date(b.date) - new Date(a.date);
+    }
+
+    return new Date(a.date) - new Date(b.date);
+
+  });
   return (
     <div className="space-y-6">
 <ExpenseForm
@@ -167,30 +196,47 @@ const filteredExpenses = expenses.filter((expense) => {
   <div className="bg-white p-4 rounded shadow">
     <div className="text-sm text-gray-500">Total</div>
     <div className="text-xl font-bold">
-      ₹{summary?.totalSpentThisMonth}
+      {Number(summary?.totalSpentThisMonth || 0)
+      .toLocaleString("en-IN", {
+      style: "currency",
+      currency: "INR",
+  })}
     </div>
   </div>
 
   <div className="bg-white p-4 rounded shadow">
-    <div className="text-sm text-gray-500">Expenses</div>
-    <div className="text-xl font-bold">
-      {summary?.totalExpenseCount}
-    </div>
+  <div className="text-sm text-gray-500">
+    Average Expense
   </div>
 
-  <div className="bg-white p-4 rounded shadow">
-    <div className="text-sm text-gray-500">Avg</div>
-    <div className="text-xl font-bold">
-      ₹{summary?.averageExpense ? summary.averageExpense.toFixed(2) : "0.00"}
-    </div>
+  <div className="text-xl font-bold">
+    {Number(summary?.averageExpense || 0).toLocaleString(
+      "en-IN",
+      {
+        style: "currency",
+        currency: "INR",
+      }
+    )}
   </div>
+</div>
+
+  
 
   <div className="bg-white p-4 rounded shadow border-l-4 border-red-500">
-    <div className="text-sm text-gray-500">Highest Expense</div>
-    <div className="text-xl font-bold text-red-500">
-      ₹{summary?.highestExpense}
-    </div>
+  <div className="text-sm text-gray-500">
+    Highest Expense
   </div>
+
+  <div className="text-xl font-bold text-red-500">
+    {Number(summary?.highestExpense || 0).toLocaleString(
+      "en-IN",
+      {
+        style: "currency",
+        currency: "INR",
+      }
+    )}
+  </div>
+</div>
 
 </div>
 <div className="bg-white p-4 rounded shadow">
@@ -265,7 +311,31 @@ const filteredExpenses = expenses.filter((expense) => {
     className="w-full border p-2 rounded"
   />
 </div>
+<div className="bg-white p-4 rounded shadow">
 
+  <h3 className="font-semibold mb-3">
+    Date Range Filter
+  </h3>
+
+  <div className="flex gap-3">
+
+    <input
+      type="date"
+      value={startDate}
+      onChange={(e) => setStartDate(e.target.value)}
+      className="border p-2 rounded"
+    />
+
+    <input
+      type="date"
+      value={endDate}
+      onChange={(e) => setEndDate(e.target.value)}
+      className="border p-2 rounded"
+    />
+
+  </div>
+
+</div>
 <div className="bg-white p-4 rounded shadow">
   <label className="block mb-2 font-semibold">
     Filter by Category
@@ -310,6 +380,28 @@ const filteredExpenses = expenses.filter((expense) => {
     <option value="Card">Card</option>
   </select>
 </div>
+<div className="bg-white p-4 rounded shadow">
+
+  <label className="block mb-2 font-semibold">
+    Sort By Date
+  </label>
+
+  <select
+    value={sortOrder}
+    onChange={(e) => setSortOrder(e.target.value)}
+    className="border p-2 rounded"
+  >
+    <option value="newest">
+      Newest First
+    </option>
+
+    <option value="oldest">
+      Oldest First
+    </option>
+
+  </select>
+
+</div>
       {/* Expense List */}
       <div className="bg-white p-4 rounded shadow">
         <div className="flex justify-between items-center mb-3">
@@ -331,7 +423,12 @@ const filteredExpenses = expenses.filter((expense) => {
     className="flex justify-between items-center border-b py-2"
   >
     <span>{e.category}</span>
-    <span>₹{e.amount}</span>
+    <span>
+    {Number(e.amount).toLocaleString("en-IN", {
+    style: "currency",
+    currency: "INR",
+    })}
+</span>
     <span>{e.date}</span>
 
     {/* EDIT BUTTON */}
