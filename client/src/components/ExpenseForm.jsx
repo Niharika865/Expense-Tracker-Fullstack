@@ -1,28 +1,38 @@
 import { useState, useEffect } from "react";
 import { addExpense, updateExpense } from "../api/expenseApi";
-export default function ExpenseForm({ onSuccess, editingExpense, setEditingExpense }) {
+
+export default function ExpenseForm({
+  onSuccess,
+  editingExpense,
+  setEditingExpense,
+}) {
+  const todayStr = new Date().toISOString().split("T")[0];
+
   const [form, setForm] = useState({
     amount: "",
     category: "Food",
-    date: "",
+    date: todayStr, // ✅ default today
     note: "",
     paymentMethod: "UPI",
     tags: "",
     recurring: false,
   });
+
+  const [error, setError] = useState("");
+
   useEffect(() => {
-  if (editingExpense) {
-    setForm({
-      amount: editingExpense.amount || "",
-      category: editingExpense.category || "Food",
-      date: editingExpense.date || "",
-      note: editingExpense.note || "",
-      paymentMethod: editingExpense.paymentMethod || "UPI",
-      tags: editingExpense.tags || "",
-      recurring: editingExpense.recurring || false,
-    });
-  }
-}, [editingExpense]);
+    if (editingExpense) {
+      setForm({
+        amount: editingExpense.amount || "",
+        category: editingExpense.category || "Food",
+        date: editingExpense.date || todayStr,
+        note: editingExpense.note || "",
+        paymentMethod: editingExpense.paymentMethod || "UPI",
+        tags: editingExpense.tags || "",
+        recurring: editingExpense.recurring || false,
+      });
+    }
+  }, [editingExpense]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -31,49 +41,67 @@ export default function ExpenseForm({ onSuccess, editingExpense, setEditingExpen
       ...form,
       [name]: type === "checkbox" ? checked : value,
     });
+
+    setError(""); // clear error while typing
   };
-const handleSubmit = async (e) => {
-  e.preventDefault();
 
-  console.log("EDIT MODE:", editingExpense);
-  console.log("FORM DATA:", form);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-  try {
-    const cleanData = {
-      ...form,
-      recurring: form.recurring ? 1 : 0,
-    };
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-    if (editingExpense) {
-      console.log("UPDATING ID:", editingExpense.id);
+    const inputDate = new Date(form.date);
 
-      await updateExpense(editingExpense.id, cleanData);
-      setEditingExpense(null);
-    } else {
-      await addExpense(cleanData);
+    // ❌ Future date check
+    if (inputDate > today) {
+      setError("Future dates are not allowed");
+      return;
     }
 
-    setForm({
-      amount: "",
-      category: "Food",
-      date: "",
-      note: "",
-      paymentMethod: "UPI",
-      tags: "",
-      recurring: false,
-    });
+    // ❌ Extra validation (optional but good)
+    if (!form.amount || form.amount <= 0) {
+      setError("Amount must be greater than 0");
+      return;
+    }
 
-    if (onSuccess) onSuccess();
-  } catch (err) {
-    console.log("ERROR FULL:", err.response?.data || err.message);
-    alert("Failed to save expense");
-  }
-};
+    try {
+      const cleanData = {
+        ...form,
+        recurring: form.recurring ? 1 : 0,
+      };
+
+      if (editingExpense) {
+        await updateExpense(editingExpense.id, cleanData);
+        setEditingExpense(null);
+      } else {
+        await addExpense(cleanData);
+      }
+
+      // reset form
+      setForm({
+        amount: "",
+        category: "Food",
+        date: todayStr,
+        note: "",
+        paymentMethod: "UPI",
+        tags: "",
+        recurring: false,
+      });
+
+      setError("");
+
+      if (onSuccess) onSuccess();
+    } catch (err) {
+      console.log(err);
+      setError("Failed to save expense");
+    }
+  };
 
   return (
     <div className="bg-white p-4 rounded shadow">
       <h2 className="text-xl font-semibold mb-4">
-        Add Expense
+        {editingExpense ? "Update Expense" : "Add Expense"}
       </h2>
 
       <form onSubmit={handleSubmit} className="space-y-3">
@@ -112,12 +140,13 @@ const handleSubmit = async (e) => {
           <option>Other</option>
         </select>
 
-        {/* Date */}
+        {/* Date (blocked future selection) */}
         <input
           type="date"
           name="date"
           value={form.date}
           onChange={handleChange}
+          max={todayStr}
           className="w-full border p-2 rounded"
         />
 
@@ -164,12 +193,17 @@ const handleSubmit = async (e) => {
           Recurring Expense
         </label>
 
+        {/* Error message */}
+        {error && (
+          <p className="text-red-500 text-sm">{error}</p>
+        )}
+
         {/* Submit */}
         <button
           type="submit"
           className="w-full bg-blue-600 text-white p-2 rounded"
         >
-          Add Expense
+          {editingExpense ? "Update Expense" : "Add Expense"}
         </button>
 
       </form>

@@ -416,37 +416,50 @@ const filteredExpenses = expenses
     Export Excel
   </button>
 </div>
-
-        {filteredExpenses.map((e) => (
+<div className="grid grid-cols-5 gap-4 font-bold border-b pb-2 mb-2 text-center">
+  <span>Category</span>
+  <span>Amount</span>
+  <span>Date</span>
+  <span>Edit</span>
+  <span>Delete</span>
+</div>
+{filteredExpenses.map((e) => (
   <div
     key={e.id}
-    className="flex justify-between items-center border-b py-2"
+    className="grid grid-cols-5 gap-4 border-b py-2 items-center text-center"
   >
-    <span>{e.category}</span>
+    {/* Category */}
+    <span className="font-medium">{e.category}</span>
+
+    {/* Amount */}
     <span>
-    {Number(e.amount).toLocaleString("en-IN", {
-    style: "currency",
-    currency: "INR",
-    })}
-</span>
-    <span>{e.date}</span>
+      {Number(e.amount).toLocaleString("en-IN", {
+        style: "currency",
+        currency: "INR",
+      })}
+    </span>
 
-    {/* EDIT BUTTON */}
+    {/* Date (FIXED) */}
+    <span>
+      {new Date(e.date).toLocaleDateString("en-IN")}
+    </span>
+
+    {/* Edit */}
     <button
-  onClick={() => handleEdit(e)}
-  className="text-blue-500 ml-2"
->
-  Edit
-</button>
+      onClick={() => handleEdit(e)}
+      className="text-blue-500"
+    >
+      Edit
+    </button>
 
-{/* DELETE BUTTON */}
+    {/* Delete */}
     <button
       onClick={() => handleDelete(e.id)}
       className="text-red-500"
     >
       Delete
     </button>
-    
+
   </div>
 ))}
 
