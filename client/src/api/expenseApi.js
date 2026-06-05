@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API = import.meta.env.VITE_API_URL;
+const API = import.meta.env.VITE_API_URL + "/api/expenses";
 
 export const getExpenses = () => axios.get(API);
 
