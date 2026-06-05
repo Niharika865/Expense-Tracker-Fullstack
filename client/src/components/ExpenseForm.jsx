@@ -25,21 +25,29 @@ export default function ExpenseForm({
       setForm({
         amount: editingExpense.amount || "",
         category: editingExpense.category || "Food",
-        date: editingExpense.date || todayStr,
+        date: editingExpense.date
+          ? editingExpense.date.split("T")[0]
+          : todayStr,
         note: editingExpense.note || "",
-        paymentMethod: editingExpense.paymentMethod || "UPI",
+        paymentMethod:
+          editingExpense.paymentMethod || "UPI",
         tags: editingExpense.tags || "",
-        recurring: editingExpense.recurring || false,
+        recurring:
+          editingExpense.recurring || false,
       });
     }
   }, [editingExpense]);
 
   const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value, type, checked } =
+      e.target;
 
     setForm({
       ...form,
-      [name]: type === "checkbox" ? checked : value,
+      [name]:
+        type === "checkbox"
+          ? checked
+          : value,
     });
 
     setError("");
@@ -48,17 +56,18 @@ export default function ExpenseForm({
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // ✅ SAFE DATE CHECK (FIXED ISSUE)
-    const today = new Date().toISOString().split("T")[0];
+    const today =
+      new Date().toISOString().split("T")[0];
 
     if (form.date > today) {
       setError("Future dates are not allowed");
       return;
     }
 
-    // basic validation
     if (!form.amount || form.amount <= 0) {
-      setError("Amount must be greater than 0");
+      setError(
+        "Amount must be greater than 0"
+      );
       return;
     }
 
@@ -69,8 +78,14 @@ export default function ExpenseForm({
       };
 
       if (editingExpense) {
-        await updateExpense(editingExpense.id, cleanData);
-        setEditingExpense(null);
+        await updateExpense(
+          editingExpense.id,
+          cleanData
+        );
+
+        if (setEditingExpense) {
+          setEditingExpense(null);
+        }
       } else {
         await addExpense(cleanData);
       }
@@ -87,37 +102,45 @@ export default function ExpenseForm({
 
       setError("");
 
-      if (onSuccess) onSuccess();
+      if (onSuccess) {
+        onSuccess();
+      }
     } catch (err) {
       console.log(err);
-      setError("Failed to save expense");
+      setError(
+        "Failed to save expense"
+      );
     }
   };
 
   return (
-    <div className="bg-white p-4 rounded shadow">
-      <h2 className="text-xl font-semibold mb-4">
-        {editingExpense ? "Update Expense" : "Add Expense"}
+    <div className="bg-white p-6 rounded-xl shadow">
+
+      <h2 className="text-2xl font-semibold mb-5 text-blue-700">
+        {editingExpense
+          ? "Update Expense"
+          : "Add Expense"}
       </h2>
 
-      <form onSubmit={handleSubmit} className="space-y-3">
+      <form
+        onSubmit={handleSubmit}
+        className="space-y-4"
+      >
 
-        {/* Amount */}
         <input
           type="number"
           name="amount"
           placeholder="Amount"
           value={form.amount}
           onChange={handleChange}
-          className="w-full border p-2 rounded"
+          className="w-full border p-3 rounded"
         />
 
-        {/* Category */}
         <select
           name="category"
           value={form.category}
           onChange={handleChange}
-          className="w-full border p-2 rounded"
+          className="w-full border p-3 rounded"
         >
           <option>Food</option>
           <option>Transport</option>
@@ -136,49 +159,44 @@ export default function ExpenseForm({
           <option>Other</option>
         </select>
 
-        {/* Date (fixed + safe) */}
         <input
           type="date"
           name="date"
           value={form.date}
           onChange={handleChange}
           max={todayStr}
-          className="w-full border p-2 rounded"
+          className="w-full border p-3 rounded"
         />
 
-        {/* Note */}
         <input
           type="text"
           name="note"
           placeholder="Note (optional)"
           value={form.note}
           onChange={handleChange}
-          className="w-full border p-2 rounded"
+          className="w-full border p-3 rounded"
         />
 
-        {/* Payment Method */}
         <select
           name="paymentMethod"
           value={form.paymentMethod}
           onChange={handleChange}
-          className="w-full border p-2 rounded"
+          className="w-full border p-3 rounded"
         >
           <option>UPI</option>
           <option>Card</option>
           <option>Cash</option>
         </select>
 
-        {/* Tags */}
         <input
           type="text"
           name="tags"
           placeholder="Tags (comma separated)"
           value={form.tags}
           onChange={handleChange}
-          className="w-full border p-2 rounded"
+          className="w-full border p-3 rounded"
         />
 
-        {/* Recurring */}
         <label className="flex items-center gap-2">
           <input
             type="checkbox"
@@ -189,17 +207,19 @@ export default function ExpenseForm({
           Recurring Expense
         </label>
 
-        {/* Error */}
         {error && (
-          <p className="text-red-500 text-sm">{error}</p>
+          <p className="text-red-500">
+            {error}
+          </p>
         )}
 
-        {/* Submit */}
         <button
           type="submit"
-          className="w-full bg-blue-600 text-white p-2 rounded"
+          className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700"
         >
-          {editingExpense ? "Update Expense" : "Add Expense"}
+          {editingExpense
+            ? "Update Expense"
+            : "Add Expense"}
         </button>
 
       </form>

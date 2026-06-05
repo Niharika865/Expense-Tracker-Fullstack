@@ -1,342 +1,330 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { formatCurrency } from "../utils/formatCurrency";
 import {
   PieChart,
   Pie,
   Cell,
   Tooltip,
   Legend,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
 } from "recharts";
-import ExpenseForm from "../components/ExpenseForm";
-import { getExpenses, getSummary, deleteExpense } from "../api/expenseApi";
-import * as XLSX from "xlsx";
-import { saveAs } from "file-saver";
+
+import { getExpenses, getSummary } from "../api/expenseApi";
 
 export default function Dashboard() {
+  const navigate = useNavigate();
+
   const [expenses, setExpenses] = useState([]);
   const [summary, setSummary] = useState(null);
-  const [editingExpense, setEditingExpense] = useState(null);
 
-  const [selectedCategory, setSelectedCategory] = useState("All");
-  const [selectedPayment, setSelectedPayment] = useState("All");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [graphView, setGraphView] = useState("month");
-  const [sortOrder, setSortOrder] = useState("newest");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [budgets] = useState(() => {
+  const savedBudgets = localStorage.getItem("budgets");
 
-  // ✅ budgets
-  const [budgets, setBudgets] = useState({
+  const defaultBudgets = {
     Food: 5000,
     Transport: 3000,
     Bills: 7000,
-  });
+    Entertainment: 0,
+    Shopping: 0,
+    Healthcare: 0,
+    Education: 5000,
+    Travel: 0,
+    Rent: 0,
+    Utilities: 0,
+    Groceries: 0,
+    Subscriptions: 0,
+    Insurance: 0,
+    Gifts: 0,
+    Other: 0,
+  };
+
+  return savedBudgets
+    ? {
+        ...defaultBudgets,
+        ...JSON.parse(savedBudgets),
+      }
+    : defaultBudgets;
+});
 
   useEffect(() => {
     loadData();
   }, []);
 
   const loadData = async () => {
-    const exp = await getExpenses();
-    const sum = await getSummary();
-
-    setExpenses(exp.data.data);
-    setSummary(sum.data.data);
-  };
-
-  const handleEdit = (expense) => {
-    setEditingExpense(expense);
-  };
-
-  const handleDelete = async (id) => {
     try {
-      await deleteExpense(id);
-      loadData();
+      const exp = await getExpenses();
+      const sum = await getSummary();
+
+      setExpenses(exp.data.data);
+      setSummary(sum.data.data);
     } catch (error) {
       console.log(error);
     }
   };
 
-  const exportToExcel = () => {
-    const exportData = filteredExpenses.map((expense) => ({
-      Category: expense.category,
-      Amount: expense.amount,
-      Date: expense.date,
-      PaymentMethod: expense.paymentMethod,
-      Note: expense.note,
-      Tags: expense.tags,
-    }));
+  const COLORS = [
+    "#8884d8",
+    "#82ca9d",
+    "#ffc658",
+    "#ff8042",
+    "#0088FE",
+    "#00C49F",
+    "#FFBB28",
+    "#FF4444",
+    "#A569BD",
+    "#5DADE2",
+    "#58D68D",
+    "#F4D03F",
+    "#EB984E",
+    "#EC7063",
+    "#7DCEA0",
+  ];
+  const dashboardCategories = [
+  "Food",
+  "Transport",
+  "Bills",
+  "Education",
+];
 
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Expenses");
-
-    const excelBuffer = XLSX.write(workbook, {
-      bookType: "xlsx",
-      type: "array",
-    });
-
-    const fileData = new Blob([excelBuffer], {
-      type:
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    });
-
-    saveAs(
-      fileData,
-      `expenses_${new Date().toISOString().slice(0, 10)}.xlsx`
-    );
-  };
-
-  // pie data
   const pieData = summary?.categoryBreakdown
-    ? Object.entries(summary.categoryBreakdown).map(([key, value]) => ({
-        name: key,
-        value,
-      }))
+    ? Object.entries(summary.categoryBreakdown).map(
+        ([key, value]) => ({
+          name: key,
+          value,
+        })
+      )
     : [];
 
-  // graph data
-  const graphData = [];
-
-  expenses.forEach((expense) => {
-    const dateObj = new Date(expense.date);
-
-    let label = "";
-
-    if (graphView === "month") {
-      label = dateObj.toLocaleString("default", {
-        month: "short",
-        year: "2-digit",
-      });
-    } else if (graphView === "year") {
-      label = dateObj.getFullYear().toString();
-    } else {
-      const day = dateObj.getDate();
-      if (day <= 7) label = "Week 1";
-      else if (day <= 14) label = "Week 2";
-      else if (day <= 21) label = "Week 3";
-      else label = "Week 4";
-    }
-
-    const existing = graphData.find((item) => item.label === label);
-
-    if (existing) {
-      existing.amount += Number(expense.amount);
-    } else {
-      graphData.push({
-        label,
-        amount: Number(expense.amount),
-      });
-    }
-  });
-
-  // ✅ FILTERED EXPENSES
-  const filteredExpenses = expenses
-    .filter((expense) => {
-      const categoryMatch =
-        selectedCategory === "All" ||
-        expense.category === selectedCategory;
-
-      const paymentMatch =
-        selectedPayment === "All" ||
-        expense.paymentMethod === selectedPayment;
-
-      const searchMatch =
-        expense.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        expense.note?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        expense.tags?.toLowerCase().includes(searchTerm.toLowerCase());
-
-      const startMatch =
-        !startDate || expense.date >= startDate;
-
-      const endMatch =
-        !endDate || expense.date <= endDate;
-
-      return (
-        categoryMatch &&
-        paymentMatch &&
-        searchMatch &&
-        startMatch &&
-        endMatch
-      );
-    })
-    .sort((a, b) => {
-      if (sortOrder === "newest") {
-        return new Date(b.date) - new Date(a.date);
-      }
-      return new Date(a.date) - new Date(b.date);
-    });
-
-  // ✅ BUDGET CALCULATION (FIXED POSITION)
   const spentByCategory = {};
 
-  filteredExpenses.forEach((exp) => {
-    spentByCategory[exp.category] =
-      (spentByCategory[exp.category] || 0) + Number(exp.amount);
+  expenses.forEach((expense) => {
+    spentByCategory[expense.category] =
+      (spentByCategory[expense.category] || 0) +
+      Number(expense.amount);
   });
 
-  const COLORS = ["#8884d8", "#82ca9d", "#ffc658", "#ff8042"];
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white p-6">
+
+      {/* HEADER */}
+      <div className="flex justify-between items-center bg-white p-5 rounded-xl shadow mb-6">
+
+        <h1 className="text-3xl font-bold text-blue-700">
+          Expense Tracker
+        </h1>
+
+        <div className="flex gap-3">
+
+          <button
+            onClick={() => navigate("/add")}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+          >
+            + Add Expense
+          </button>
+
+          <button
+            onClick={() => navigate("/history")}
+            className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800"
+          >
+            History
+          </button>
+
+          <button
+            onClick={() => navigate("/budget")}
+            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+          >
+            Budget
+          </button>
+
+        </div>
+      </div>
+
+      {/* SUMMARY CARDS */}
+      <div className="grid md:grid-cols-3 gap-5 mb-6">
+
+        <div className="bg-white p-5 rounded-xl shadow">
+          <p className="text-gray-500">Total Spent</p>
+
+          <h2 className="text-2xl font-bold text-blue-700">
+            
+            {formatCurrency( summary?.totalSpentThisMonth || 0 )}
+          </h2>
+        </div>
+
+        <div className="bg-white p-5 rounded-xl shadow">
+          <p className="text-gray-500">Average Expense</p>
+
+          <h2 className="text-2xl font-bold text-green-600">
+            
+            {formatCurrency( summary?.averageExpense || 0 )}
+          </h2>
+        </div>
+
+        <div className="bg-white p-5 rounded-xl shadow">
+          <p className="text-gray-500">Highest Expense</p>
+
+          <h2 className="text-2xl font-bold text-red-500">
+            {formatCurrency( summary?.highestExpense || 0 )}
+          </h2>
+        </div>
+
+      </div>
+
+      {/* PIE CHART + BUDGET */}
+      <div className="grid lg:grid-cols-2 gap-6 mb-6">
+
+        {/* PIE CHART */}
+        <div className="bg-white p-5 rounded-xl shadow">
+
+          <h2 className="text-xl font-semibold mb-4">
+            Expense Breakdown
+          </h2>
+
+          <PieChart width={400} height={300}>
+            <Pie
+              data={pieData}
+              dataKey="value"
+              nameKey="name"
+              outerRadius={110}
+            >
+              {pieData.map((_, index) => (
+                <Cell
+                  key={index}
+                  fill={COLORS[index % COLORS.length]}
+                />
+              ))}
+            </Pie>
+
+            <Tooltip />
+            <Legend />
+          </PieChart>
+
+        </div>
+
+        {/* BUDGET OVERVIEW */}
+        <div className="bg-white p-5 rounded-xl shadow">
+
+          <div className="flex justify-between items-center mb-4">
+  <h2 className="text-xl font-semibold">
+    Budget Overview
+  </h2>
+
+  <button
+    onClick={() => navigate("/budget-overview")}
+    className="text-blue-600 hover:underline"
+  >
+    View Full →
+  </button>
+</div>
+
+          {dashboardCategories.map((category) => {
+  const spent =
+    spentByCategory[category] || 0;
+
+  const budget =
+    budgets[category] || 0;
+
+  const percent =
+    budget > 0
+      ? (spent / budget) * 100
+      : spent > 0
+      ? 100
+      : 0;
 
   return (
-    <div className="space-y-6">
+    <div
+      key={category}
+      className="mb-5"
+    >
+      <div className="flex justify-between mb-2">
+        <span className="font-medium">
+          {category}
+        </span>
 
-      <ExpenseForm
-        onSuccess={loadData}
-        editingExpense={editingExpense}
-        setEditingExpense={setEditingExpense}
-      />
+        <span>
+          {formatCurrency(spent)} /
+          {formatCurrency(budget)}
+        </span>
+      </div>
 
-      {/* SUMMARY */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="w-full h-3 bg-gray-200 rounded-full">
+        <div
+          className={`h-3 rounded-full ${
+            percent > 100 || (budget === 0 && spent > 0)
+              ? "bg-red-500"
+              : spent > 0
+              ? "bg-green-500"
+              : "bg-gray-400"
+          }`}
+          style={{
+            width: `${Math.min(percent, 100)}%`,
+          }}
+        />
+      </div>
 
-        <div className="bg-white p-4 rounded shadow">
-          <div>Total</div>
-          <div className="text-xl font-bold">
-            {Number(summary?.totalSpentThisMonth || 0).toLocaleString(navigator.language, {
-              style: "currency",
-              currency: "INR",
-            })}
-          </div>
-        </div>
+      {spent === 0 && (
+        <p className="text-gray-500 text-sm mt-1">
+          No expenses yet
+        </p>
+      )}
 
-        <div className="bg-white p-4 rounded shadow">
-          <div>Average</div>
-          <div className="text-xl font-bold">
-            {Number(summary?.averageExpense || 0).toLocaleString(navigator.language, {
-              style: "currency",
-              currency: "INR",
-            })}
-          </div>
-        </div>
+      {(percent > 100 ||
+        (budget === 0 && spent > 0)) && (
+        <p className="text-red-500 text-sm mt-1">
+          ⚠ Budget Exceeded
+        </p>
+      )}
+    </div>
+  );
+})}
 
-        <div className="bg-white p-4 rounded shadow">
-          <div>Highest</div>
-          <div className="text-xl font-bold text-red-500">
-            {Number(summary?.highestExpense || 0).toLocaleString(navigator.language, {
-              style: "currency",
-              currency: "INR",
-            })}
-          </div>
         </div>
 
       </div>
 
-      {/* PIE CHART */}
-      <div className="bg-white p-4 rounded shadow">
-        <h2>Expense Breakdown</h2>
+      {/* RECENT EXPENSES */}
+      <div className="bg-white p-5 rounded-xl shadow">
 
-        <PieChart width={400} height={300}>
-          <Pie data={pieData} dataKey="value" nameKey="name" outerRadius={100}>
-            {pieData.map((_, i) => (
-              <Cell key={i} fill={COLORS[i % COLORS.length]} />
-            ))}
-          </Pie>
-          <Tooltip />
-          <Legend />
-        </PieChart>
-      </div>
+        <div className="flex justify-between items-center mb-4">
 
-      {/* BUDGET SECTION (CORRECT PLACE) */}
-      <div className="bg-white p-4 rounded shadow mb-4">
-        <h2 className="text-xl font-semibold mb-3">Category Budgets</h2>
+          <h2 className="text-xl font-semibold">
+            Recent Expenses
+          </h2>
 
-        {Object.keys(budgets).map((cat) => (
-          <div key={cat} className="flex items-center gap-3 mb-2">
-            <span className="w-32">{cat}</span>
+          <button
+            onClick={() => navigate("/history")}
+            className="text-blue-600 font-medium hover:underline"
+          >
+            View All →
+          </button>
 
-            <input
-              type="number"
-              value={budgets[cat]}
-              onChange={(e) =>
-                setBudgets({
-                  ...budgets,
-                  [cat]: Number(e.target.value),
-                })
-              }
-              className="border p-1 rounded w-32"
-            />
+        </div>
 
-            <span>₹</span>
-          </div>
-        ))}
-      </div>
+        {expenses.length === 0 ? (
+          <p className="text-gray-500">
+            No expenses found.
+          </p>
+        ) : (
+          [...expenses]
+  .sort(
+    (a, b) =>
+      new Date(b.date) - new Date(a.date)
+  )
+  .slice(0, 5)
+  .map((expense) => (
+            <div
+              key={expense.id}
+              className="flex justify-between border-b py-3"
+            >
+              <span>{expense.category}</span>
 
-      {/* BUDGET OVERVIEW */}
-      <div className="bg-white p-4 rounded shadow">
-        <h2 className="text-xl font-semibold mb-3">Budget Overview</h2>
-
-        {Object.keys(budgets).map((cat) => {
-          const spent = spentByCategory[cat] || 0;
-          const budget = budgets[cat];
-          const percent = (spent / budget) * 100;
-
-          return (
-            <div key={cat} className="mb-4">
-
-              <div className="flex justify-between">
-                <span>{cat}</span>
-                <span>₹{spent} / ₹{budget}</span>
-              </div>
-
-              <div className="w-full bg-gray-200 h-2 rounded">
-                <div
-                  className={`h-2 rounded ${
-                    percent > 100 ? "bg-red-500" : "bg-green-500"
-                  }`}
-                  style={{ width: `${Math.min(percent, 100)}%` }}
-                />
-              </div>
-
-              {percent > 100 && (
-                <p className="text-red-500 text-sm">
-                  ⚠ Budget exceeded!
-                </p>
-              )}
+              <span className="font-semibold">
+                {formatCurrency(expense.amount)}
+              </span>
             </div>
-          );
-        })}
-      </div>
+          ))
+        )}
 
-      {/* EXPENSE LIST */}
-      <div className="bg-white p-4 rounded shadow">
-
-        <div className="grid grid-cols-5 gap-4 font-bold text-center">
-          <span>Category</span>
-          <span>Amount</span>
-          <span>Date</span>
-          <span>Edit</span>
-          <span>Delete</span>
-        </div>
-
-        {filteredExpenses.map((e) => (
-          <div key={e.id} className="grid grid-cols-5 gap-4 text-center py-2">
-
-            <span>{e.category}</span>
-
-            <span>
-              {Number(e.amount).toLocaleString(navigator.language, {
-                style: "currency",
-                currency: "INR",
-              })}
-            </span>
-
-            <span>{new Date(e.date).toLocaleDateString()}</span>
-
-            <button onClick={() => handleEdit(e)} className="text-blue-500">
-              Edit
-            </button>
-
-            <button onClick={() => handleDelete(e.id)} className="text-red-500">
-              Delete
-            </button>
-
-          </div>
-        ))}
       </div>
 
     </div>
