@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { formatCurrency } from "../utils/formatCurrency";
+import { formatCurrency } from "../utils/FormatCurrency";
 import {
   PieChart,
   Pie,

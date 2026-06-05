@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { getExpenses, deleteExpense } from "../api/expenseApi";
 import { useNavigate } from "react-router-dom";
-import { formatCurrency } from "../utils/formatCurrency";
+import { formatCurrency } from "../utils/FormatCurrency";
 
 export default function History() {
   const [expenses, setExpenses] = useState([]);
