@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API = "https://expense-tracker-api-ljzp.onrender.com";
+const API = import.meta.env.VITE_API_URL;
 
 export const getExpenses = () => axios.get(API);
 
