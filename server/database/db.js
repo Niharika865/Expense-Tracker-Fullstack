@@ -1,7 +1,9 @@
 const Database = require("better-sqlite3");
+const path = require("path");
 
-const db = new Database("expenses.db");
+const db = new Database(path.join(__dirname, "expenses.db"));
 
+// Create table
 db.exec(`
 CREATE TABLE IF NOT EXISTS expenses (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
